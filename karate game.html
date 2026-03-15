@@ -65,7 +65,7 @@
   <span>← →</span> Mișcare &nbsp;|&nbsp; <span>↑</span> Săritură &nbsp;|&nbsp;
   <span>A</span> Pumn &nbsp;|&nbsp; <span>S</span> Picior &nbsp;|&nbsp; <span>D</span> Apărare &nbsp;|&nbsp;
   <span class="q">Q</span> Hadouken &nbsp;|&nbsp; <span class="e">E</span> Fulger &nbsp;|&nbsp;
-  <span class="r">R</span> Inferno &nbsp;|&nbsp; <span>Spațiu</span> Ia Arma
+  <span class="r">R</span> Inferno &nbsp;|&nbsp; <span>Spațiu</span> Ia Arma &nbsp;|&nbsp; <span style="color:#ff8800">F</span> Aruncă Bombă
 </div>
 
 <script>
@@ -338,6 +338,73 @@ class Projectile{
     ctx.closePath();ctx.fillStyle='#ff5500';ctx.fill();ctx.strokeStyle=OUTLINE;ctx.lineWidth=3;ctx.stroke();
     ctx.beginPath();ctx.arc(this.x,this.y,r*.55,0,Math.PI*2);ctx.fillStyle='#ffcc00';ctx.fill();
     ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.arc(this.x-r*.2,this.y-r*.3,r*.22,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  THROWN BOMB
+// ══════════════════════════════════════════════════════
+class ThrownBomb{
+  constructor(x,y,dir){
+    this.x=x; this.y=y;
+    this.vx=dir*9; this.vy=-13;
+    this.active=true; this.age=0; this.exploded=false;
+  }
+  update(){
+    if(this.exploded){this.active=false;return;}
+    this.x+=this.vx; this.y+=this.vy;
+    this.vy+=GRAVITY*.75;
+    this.age++;
+    // explode on ground or when very close to enemy
+    const tgt=aiFighter;
+    const nearEnemy=tgt&&Math.hypot(this.x-tgt.cx,this.y-(tgt.cy-30))<50;
+    if(this.y>=GROUND||nearEnemy) this._explode();
+    if(this.x<-80||this.x>W+80) this.active=false;
+  }
+  _explode(){
+    if(this.exploded)return;
+    this.exploded=true;
+    const bx=this.x, by=Math.min(this.y,GROUND);
+    doShake(32); doFlash('#ff6600',.65);
+    spawnStars(bx,by-20,18); spawnSparks(bx,by-20,28,'#ff6600'); spawnSparks(bx,by-20,14,'#ffee00');
+    clashEffects.push({x:bx,y:by-20,t:85,maxT:85});
+    [player,aiFighter].forEach(f=>{
+      if(!f)return;
+      const dist=Math.hypot(bx-f.cx,by-(f.cy-30));
+      if(dist<140){
+        const dmg=Math.round(f.maxHP*(0.85-dist/500));
+        if(dmg>0){
+          f.takeDamage(dmg,'trap');
+          impactTexts.push(new ImpactText(f.cx,f.cy-80,'💣 -'+dmg+'!','#ff6600'));
+        }
+      }
+    });
+  }
+  draw(){
+    ctx.save();
+    // ground shadow
+    const sh=Math.max(0,1-(this.y/(GROUND*0.9)));
+    ctx.fillStyle=`rgba(0,0,0,${sh*.3})`;
+    ctx.beginPath();ctx.ellipse(this.x,GROUND+2,14*(1-sh*.5),4*(1-sh*.5),0,0,Math.PI*2);ctx.fill();
+    // spin
+    ctx.translate(this.x,this.y);
+    ctx.rotate(this.age*.18);
+    // body
+    ctx.beginPath();ctx.arc(0,0,11,0,Math.PI*2);
+    ctx.fillStyle='#111';ctx.fill();
+    ctx.strokeStyle=OUTLINE;ctx.lineWidth=2.5;ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.14)';ctx.beginPath();ctx.arc(-3,-3,4.5,0,Math.PI*2);ctx.fill();
+    // fuse
+    ctx.rotate(-this.age*.18); // unrotate for fuse direction
+    const fFlicker=Math.sin(this.age*.55)*3;
+    ctx.strokeStyle='#8b6914';ctx.lineWidth=2;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(5,-9);ctx.quadraticCurveTo(10,-15+fFlicker,8,-20);ctx.stroke();
+    // sparking tip
+    [[5,'#ffee00',1],[3,'#ffffff',.7]].forEach(([r,c,a])=>{
+      ctx.fillStyle=c;ctx.globalAlpha=a*(0.55+Math.sin(this.age*.45)*.45);
+      ctx.beginPath();ctx.arc(8,-20,r,0,Math.PI*2);ctx.fill();
+    });
     ctx.restore();
   }
 }
@@ -1595,6 +1662,11 @@ function drawPowerHUD(){
   if(player.shieldTimer>0)   badges.push({icon:'🛡',text:'SCUT activ',col:'#00eeff',timer:player.shieldTimer,maxT:180});
   if(player.speedBoost>0)    badges.push({icon:'⚡',text:'VITEZĂ ×1.8',col:'#ffee00',timer:player.speedBoost,maxT:300});
 
+  // bomb stock badge (always shown during game)
+  {
+    const bLabel='💣 ×'+bombStock+(bombCooldown>0?' ('+Math.ceil(bombCooldown/60)+'s)':'  F=ARUNCĂ');
+    badges.unshift({icon:'',text:bLabel,col:bombStock>0?'#ff8800':'#666666',timer:bombCooldown>0?bombCooldown:1,maxT:100});
+  }
   if(badges.length===0)return;
   const bh=22, gap=6, py=H-30;
   let px=10;
@@ -1642,6 +1714,7 @@ function updateHUD(){
 let level=1,gameOn=false,rafId=0;
 let player,aiFighter,aiCtrl,projectiles=[];
 const pickups=[];let pickupTimer=0;
+const bombs=[];let bombStock=5;let bombCooldown=0;
 
 function showMsg(t,c='#ffd700'){const el=document.getElementById('msgOverlay');el.textContent=t;el.style.color=c;el.style.textShadow=`0 4px 0 ${darken(c,60)}, 0 0 30px ${c}`;el.style.display='block';}
 function hideMsg(){document.getElementById('msgOverlay').style.display='none';}
@@ -1681,6 +1754,13 @@ function loop(){
     if(ep&&!(prevK['e']||prevK['E'])){const pr=player.tryMagic('lightning');if(pr)projectiles.push(pr);}
     if(rp&&!(prevK['r']||prevK['R'])){const pr=player.tryMagic('inferno');if(pr)projectiles.push(pr);}
     if(keys['d']||keys['D'])player.state='block';else if(player.state==='block')player.state='idle';
+    // F: throw bomb
+    const fp=keys['f']||keys['F'];
+    if(fp&&!(prevK['f']||prevK['F'])&&bombStock>0&&bombCooldown===0){
+      bombStock--;bombCooldown=100;
+      bombs.push(new ThrownBomb(player.cx+player.facing*10,player.cy-50,player.facing));
+      spawnSparks(player.cx,player.cy-50,5,'#ff8800');
+    }
     // Space: pick up nearby weapon
     if(keys[' ']&&!prevK[' ']){
       for(const pk of pickups){
@@ -1690,6 +1770,7 @@ function loop(){
   }
   Object.assign(prevK,keys);
 
+  if(bombCooldown>0)bombCooldown--;
   player.update(aiFighter);
   aiFighter.update(player);
   aiCtrl.update(projectiles);
@@ -1747,6 +1828,13 @@ function loop(){
     if(pk.active)pk.draw();
   }
 
+  // thrown bombs
+  for(let i=bombs.length-1;i>=0;i--){
+    bombs[i].update();
+    if(bombs[i].active)bombs[i].draw();
+    else bombs.splice(i,1);
+  }
+
   try{aiFighter.draw();}catch(e){console.error('drawAI error:',e);}
   try{player.draw();}catch(e){console.error('drawPlayer error:',e);}
 
@@ -1791,6 +1879,7 @@ function startGame(){
   cancelAnimationFrame(rafId);hideMsg();
   projectiles=[];clashEffects=[];particles.length=0;impactTexts.length=0;shake=0;flashAlpha=0;
   pickups.length=0;pickupTimer=0;
+  bombs.length=0;bombStock=5;bombCooldown=0;
   player=new Fighter(100,false);
   aiFighter=new Fighter(660,true);
   aiFighter.maxHP=Math.round((80+level*1.4)*currentEnemy.hpMult);aiFighter.health=aiFighter.maxHP;
