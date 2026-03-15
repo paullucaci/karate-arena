@@ -465,7 +465,8 @@ class Pickup{
     if(!fighter.onGround)return false;
     const dx=Math.abs(this.x-fighter.cx), dy=Math.abs(this.y-fighter.y);
     if(this.cat==='trap'&&this.age<this.armDelay)return false;
-    return dx<32&&dy<30;
+    const r=this.cat==='trap'?44:32;
+    return dx<r&&dy<36;
   }
   applyEffect(fighter){
     this.active=false;
@@ -475,8 +476,8 @@ class Pickup{
     else if(this.type==='shield'){fighter.shieldTimer=180;spawnSparks(fighter.cx,fighter.cy-40,8,'#00eeff');impactTexts.push(new ImpactText(fighter.cx,fighter.cy-70,'SCUT!','#00eeff'));}
     else if(this.type==='sword'){fighter.weaponType='sword';fighter.weaponTimer=360;spawnSparks(fighter.cx,fighter.cy-40,10,'#ff8800');impactTexts.push(new ImpactText(fighter.cx,fighter.cy-70,'SABIE!','#ff8800'));}
     else if(this.type==='hammer'){fighter.weaponType='hammer';fighter.weaponTimer=300;spawnSparks(fighter.cx,fighter.cy-40,10,'#cc8844');impactTexts.push(new ImpactText(fighter.cx,fighter.cy-70,'CIOCAN!','#cc8844'));}
-    else if(this.type==='trap_fire'){fighter.takeDamage(22,'trap');fighter.frozenTimer=55;doFlash('#ff4400',.35);impactTexts.push(new ImpactText(fighter.cx,fighter.cy-70,'🔥 -22!','#ff4400'));}
-    else if(this.type==='trap_spike'){fighter.takeDamage(28,'trap');doFlash('#ffffff',.3);impactTexts.push(new ImpactText(fighter.cx,fighter.cy-70,'⚠ -28!','#cccccc'));}
+    else if(this.type==='trap_fire'){const fd=Math.round(fighter.maxHP*0.55);fighter.takeDamage(fd,'trap');fighter.frozenTimer=70;doFlash('#ff4400',.5);impactTexts.push(new ImpactText(fighter.cx,fighter.cy-70,'🔥 -'+fd+'!','#ff4400'));}
+    else if(this.type==='trap_spike'){const sd=Math.round(fighter.maxHP*0.68);fighter.takeDamage(sd,'trap');doFlash('#ffffff',.45);impactTexts.push(new ImpactText(fighter.cx,fighter.cy-70,'⚠ -'+sd+'!','#cccccc'));}
   }
 }
 
