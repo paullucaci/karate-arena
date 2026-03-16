@@ -65,7 +65,7 @@
   <span>← →</span> Mișcare &nbsp;|&nbsp; <span>↑</span> Săritură &nbsp;|&nbsp;
   <span>A</span> Pumn &nbsp;|&nbsp; <span>S</span> Picior &nbsp;|&nbsp; <span>D</span> Apărare &nbsp;|&nbsp;
   <span class="q">Q</span> Hadouken &nbsp;|&nbsp; <span class="e">E</span> Fulger &nbsp;|&nbsp;
-  <span class="r">R</span> Inferno &nbsp;|&nbsp; <span>Spațiu</span> Ia Arma &nbsp;|&nbsp; <span style="color:#ff8800">F</span> Bombă &nbsp;|&nbsp; <span style="color:#ff2200">1+1</span> Țintă Mortală
+  <span class="r">R</span> Inferno &nbsp;|&nbsp; <span>Spațiu</span> Ia Arma &nbsp;|&nbsp; <span style="color:#ff8800">F</span> Bombă &nbsp;|&nbsp; <span style="color:#ff2200">1+1</span> Țintă Mortală &nbsp;|&nbsp; <span style="color:#ffd700">2</span> ⚔ Mega Ultra Slash
 </div>
 
 <script>
@@ -1678,6 +1678,12 @@ function drawPowerHUD(){
   if(player.shieldTimer>0)   badges.push({icon:'🛡',text:'SCUT activ',col:'#00eeff',timer:player.shieldTimer,maxT:180});
   if(player.speedBoost>0)    badges.push({icon:'⚡',text:'VITEZĂ ×1.8',col:'#ffee00',timer:player.speedBoost,maxT:300});
 
+  // mega slash badge
+  if(slashCooldown>0){
+    badges.push({icon:'⚔',text:'SLASH  '+Math.ceil(slashCooldown/60)+'s',col:'#886600',timer:SLASH_COOLDOWN-slashCooldown,maxT:SLASH_COOLDOWN});
+  } else {
+    badges.push({icon:'⚔',text:'MEGA SLASH  2=ATAC',col:'#ffd700',timer:1,maxT:1});
+  }
   // target-lock badge
   if(targetState===1){
     badges.push({icon:'🎯',text:'APASĂ 1 DIN NOU!',col:'#ff2200',timer:targetTimer,maxT:TARGET_DURATION});
@@ -1745,6 +1751,9 @@ let targetTimer=0;   // countdown for targeting phase
 let targetCooldown=0;// cooldown after use
 const TARGET_DURATION=210; // ~3.5s to press 1 again
 const TARGET_COOLDOWN=540; // 9s cooldown
+// Mega Ultra Slash (tasta 2)
+let slashCooldown=0, slashFx=null;
+const SLASH_COOLDOWN=480; // 8s
 
 function showMsg(t,c='#ffd700'){const el=document.getElementById('msgOverlay');el.textContent=t;el.style.color=c;el.style.textShadow=`0 4px 0 ${darken(c,60)}, 0 0 30px ${c}`;el.style.display='block';}
 function hideMsg(){document.getElementById('msgOverlay').style.display='none';}
@@ -1807,6 +1816,25 @@ function loop(){
         addClash(aiFighter.cx,aiFighter.cy-40);
       }
     }
+    // 2: MEGA ULTRA SLASH
+    if(keys['2']&&!prevK['2']&&slashCooldown===0){
+      slashCooldown=SLASH_COOLDOWN;
+      player.state='punch'; player.stateTimer=35;
+      // 80% HP damage guaranteed
+      if(aiFighter){
+        const dmg=Math.round(aiFighter.maxHP*0.80);
+        aiFighter.takeDamage(dmg,'magic');
+        slashFx={t:55,maxT:55};
+        doShake(55); doFlash('#ffffff',1.0);
+        spawnStars(W/2,H/2,40);
+        spawnSparks(aiFighter.cx,aiFighter.cy-50,50,'#ffffff');
+        spawnSparks(aiFighter.cx,aiFighter.cy-50,35,'#ffd700');
+        spawnSparks(aiFighter.cx,aiFighter.cy-50,25,'#88ccff');
+        impactTexts.push(new ImpactText(W/2,120,'⚔ MEGA ULTRA SLASH! ⚔','#ffd700'));
+        impactTexts.push(new ImpactText(aiFighter.cx,aiFighter.cy-90,'💥 -'+dmg+'!!!','#ffffff'));
+        addClash(aiFighter.cx,aiFighter.cy-40);
+      }
+    }
     // F: throw bomb
     const fp=keys['f']||keys['F'];
     if(fp&&!(prevK['f']||prevK['F'])&&bombStock>0&&bombCooldown===0){
@@ -1843,6 +1871,7 @@ function loop(){
 
   if(bombCooldown>0)bombCooldown--;
   if(targetCooldown>0)targetCooldown--;
+  if(slashCooldown>0)slashCooldown--;
   if(clickCooldown>0)clickCooldown--;
   if(markTimer>0){markTimer--;if(markTimer===0)enemyMarked=false;}
   if(targetTimer>0){targetTimer--;if(targetTimer===0){targetState=0;aiFighter.frozenTimer=0;}}
@@ -1958,6 +1987,34 @@ function loop(){
 
   // impact texts (above everything)
   for(let i=impactTexts.length-1;i>=0;i--){if(!impactTexts[i].update())impactTexts.splice(i,1);else impactTexts[i].draw();}
+
+  // ── MEGA ULTRA SLASH effect ──
+  if(slashFx){
+    const p=slashFx.t/slashFx.maxT;
+    slashFx.t--;
+    ctx.save();
+    ctx.globalAlpha=p*0.92;
+    // 5 linii diagonale paralele care taie tot ecranul
+    const lines=[
+      {x1:-60,y1:0,  x2:W+60,y2:H*0.55},
+      {x1:-60,y1:30, x2:W+60,y2:H*0.70},
+      {x1:-60,y1:60, x2:W+60,y2:H*0.85},
+      {x1:-60,y1:90, x2:W+60,y2:H*1.0},
+      {x1:-60,y1:120,x2:W+60,y2:H*1.15},
+    ];
+    lines.forEach((l,i)=>{
+      const off=(slashFx.maxT-slashFx.t-i*3)*18;
+      // glow exterior auriu
+      ctx.strokeStyle='#ffd700'; ctx.lineWidth=18*p; ctx.lineCap='butt';
+      ctx.shadowColor='#ffd700'; ctx.shadowBlur=25;
+      ctx.beginPath(); ctx.moveTo(l.x1+off,l.y1); ctx.lineTo(l.x2+off,l.y2); ctx.stroke();
+      // miez alb
+      ctx.strokeStyle='#ffffff'; ctx.lineWidth=7*p; ctx.shadowBlur=0;
+      ctx.beginPath(); ctx.moveTo(l.x1+off,l.y1); ctx.lineTo(l.x2+off,l.y2); ctx.stroke();
+    });
+    ctx.restore();
+    if(slashFx.t<=0)slashFx=null;
+  }
 
   // laser beam click-kill effect
   if(clickKillFx){
@@ -2080,6 +2137,7 @@ function startGame(){
   pickups.length=0;pickupTimer=0;
   bombs.length=0;bombStock=5;bombCooldown=0;
   targetState=0;targetTimer=0;targetCooldown=0;
+  slashCooldown=0;slashFx=null;
   clickCooldown=0;clickKillFx=null;enemyMarked=false;markTimer=0;isAiming=false;
   player=new Fighter(100,false);
   aiFighter=new Fighter(660,true);
