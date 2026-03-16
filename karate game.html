@@ -33,10 +33,45 @@
     #hint span { color:#ffd700; } #hint .q{color:#88bbff;} #hint .e{color:#ffee44;} #hint .r{color:#ff6633;}
     #msgOverlay { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:52px; font-weight:bold; text-shadow:0 4px 0 rgba(0,0,0,.6); pointer-events:none; display:none; letter-spacing:2px; text-align:center; white-space:nowrap; }
     #gameWrap { position:relative; }
+    /* ── BARA MONEDE ── */
+    #moneyRow { width:820px; display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; }
+    #moneyDisplay { background:rgba(0,0,0,.55); border:2px solid #ffd700; border-radius:20px; padding:5px 18px; font-size:15px; color:#ffd700; font-weight:bold; letter-spacing:1px; display:flex; align-items:center; gap:6px; }
+    #moneyFill { height:10px; width:180px; background:#0a0010; border-radius:5px; border:2px solid #aa8800; overflow:hidden; display:inline-block; vertical-align:middle; margin-left:8px; }
+    #moneyFillBar { height:100%; background:linear-gradient(90deg,#ffd700,#ffaa00); border-radius:3px; transition:width .4s; }
+    #shopBtn { background:linear-gradient(135deg,#44006e,#aa00ff); color:#ffd700; border:2px solid #cc44ff; border-radius:12px; padding:8px 20px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow:0 3px 0 #440066; transition:transform .08s,box-shadow .08s; letter-spacing:.5px; }
+    #shopBtn:hover { transform:translateY(-2px); box-shadow:0 5px 0 #440066; background:linear-gradient(135deg,#5500aa,#cc00ff); }
+    /* ── SHOP OVERLAY ── */
+    #shopOverlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(8,0,20,.97); z-index:999; flex-direction:column; align-items:center; }
+    #shopOverlay.open { display:flex; }
+    #shopHeader { width:100%; max-width:920px; display:flex; justify-content:space-between; align-items:center; padding:16px 24px 12px; border-bottom:2px solid #5500aa; flex-shrink:0; }
+    #shopTitle { font-size:26px; color:#ffd700; text-shadow:0 0 18px #ffd700; letter-spacing:3px; }
+    #shopCoins { font-size:17px; color:#ffd700; font-weight:bold; }
+    #closeShopBtn { background:#220033; border:2px solid #cc44ff; color:#cc44ff; border-radius:8px; padding:7px 20px; font-size:14px; cursor:pointer; font-weight:bold; transition:all .12s; }
+    #closeShopBtn:hover { background:#cc44ff; color:#000; }
+    #shopTabs { display:flex; gap:8px; padding:10px 24px; flex-shrink:0; }
+    .sTab { padding:8px 22px; border-radius:8px; background:rgba(255,255,255,.07); border:2px solid #444; color:#aaa; cursor:pointer; font-size:13px; font-weight:bold; transition:all .12s; }
+    .sTab.on { background:rgba(170,0,255,.3); border-color:#aa00ff; color:#fff; text-shadow:0 0 8px #cc88ff; }
+    #shopGrid { flex:1; overflow-y:auto; width:100%; max-width:920px; padding:8px 20px 24px; display:grid; grid-template-columns:repeat(5,1fr); gap:10px; align-content:start; }
+    #shopGrid::-webkit-scrollbar { width:6px; } #shopGrid::-webkit-scrollbar-track { background:#110022; } #shopGrid::-webkit-scrollbar-thumb { background:#5500aa; border-radius:3px; }
+    .sItem { background:rgba(255,255,255,.05); border:2px solid #333; border-radius:11px; padding:10px 8px; text-align:center; cursor:pointer; transition:all .12s; position:relative; }
+    .sItem:hover:not(.sCant) { border-color:#aa00ff; background:rgba(120,0,220,.18); transform:translateY(-2px); }
+    .sItem.sOwned { border-color:#ffd700; background:rgba(255,215,0,.1); }
+    .sItem.sCant { opacity:.45; cursor:not-allowed; }
+    .sItem .sEm { font-size:28px; display:block; margin-bottom:4px; }
+    .sItem .sNm { font-size:11px; font-weight:bold; color:#fff; margin-bottom:3px; line-height:1.25; min-height:28px; }
+    .sItem .sDsc { font-size:9.5px; color:#999; margin-bottom:5px; line-height:1.3; min-height:26px; }
+    .sItem .sPr { font-size:12px; color:#ffd700; font-weight:bold; }
+    .sItem .sBdg { position:absolute; top:5px; right:6px; font-size:10px; color:#ffd700; }
+    .sItem.sOwned .sPr { color:#00dd88; }
+    #shopMsg { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.85); border:2px solid #ffd700; border-radius:12px; padding:10px 28px; font-size:16px; font-weight:bold; color:#ffd700; display:none; z-index:1001; letter-spacing:1px; pointer-events:none; }
   </style>
 </head>
 <body>
 <h1>⚔ KARATE ARENA ⚔</h1>
+<div id="moneyRow">
+  <div id="moneyDisplay">💰 <span id="coinCount">300</span> monede <span id="moneyFill"><span id="moneyFillBar" style="width:30%"></span></span></div>
+  <button id="shopBtn">🛒 Cumpără din Magazin</button>
+</div>
 <div id="levelSelect">
   <label>Nivel (1–100):</label>
   <input type="number" id="levelInput" min="1" max="100" value="1">
@@ -61,6 +96,21 @@
   <canvas id="gameCanvas" width="820" height="420"></canvas>
   <div id="msgOverlay"></div>
 </div>
+<!-- ══ SHOP OVERLAY ══ -->
+<div id="shopOverlay">
+  <div id="shopHeader">
+    <div id="shopTitle">🛒 MAGAZIN KARATE ARENA</div>
+    <div id="shopCoins">💰 <span id="shopCoinCount">300</span> monede</div>
+    <button id="closeShopBtn">✕ Închide</button>
+  </div>
+  <div id="shopTabs">
+    <button class="sTab on" data-cat="acc">🧪 Accesorii</button>
+    <button class="sTab" data-cat="putere">⚡ Puteri</button>
+    <button class="sTab" data-cat="arma">⚔ Arme</button>
+  </div>
+  <div id="shopGrid"></div>
+</div>
+<div id="shopMsg"></div>
 <div id="hint">
   <span>← →</span> Mișcare &nbsp;|&nbsp; <span>↑</span> Săritură &nbsp;|&nbsp;
   <span>A</span> Pumn &nbsp;|&nbsp; <span>S</span> Picior &nbsp;|&nbsp; <span>D</span> Apărare &nbsp;|&nbsp;
@@ -732,7 +782,7 @@ class Fighter{
     this.state='punch';this.stateTimer=22;this.atkCooldown=32;
     const range=this.atkRange||95;
     if(Math.abs(this.cx-t.cx)<range&&this.facing===Math.sign(t.cx-this.cx)){
-      const d=Math.round((14+rand(9))*this.dmgMult); t.takeDamage(d);
+      const d=Math.round((14+rand(9))*this.dmgMult*(this.isAI?1:(shopDmgMult||1))); t.takeDamage(d);
       spawnDust(t.cx,t.cy,4);
       this._weaponHitFx(t);
     }
@@ -742,7 +792,7 @@ class Fighter{
     this.state='kick';this.stateTimer=28;this.atkCooldown=42;
     const range=this.atkRange||115;
     if(Math.abs(this.cx-t.cx)<range&&this.facing===Math.sign(t.cx-this.cx)){
-      const d=Math.round((20+rand(12))*this.dmgMult); t.takeDamage(d);
+      const d=Math.round((20+rand(12))*this.dmgMult*(this.isAI?1:(shopDmgMult||1))); t.takeDamage(d);
       spawnDust(t.cx,t.cy,5);
       this._weaponHitFx(t);
     }
@@ -760,9 +810,10 @@ class Fighter{
   }
   tryMagic(type){
     const sp=SPELLS[type];
-    if(this.magicCooldown>0||this.mana<sp.cost||this.stateTimer>10)return null;
+    const freeMana=!this.isAI&&(shopNoMana||false);
+    if(this.magicCooldown>0||(this.mana<sp.cost&&!freeMana)||this.stateTimer>10)return null;
     this.state='magic';this.stateTimer=24;this.magicCooldown=30;
-    this.mana-=sp.cost;this.spellLabel=sp.label;this.spellLabelTimer=45;
+    if(!freeMana)this.mana-=sp.cost; this.spellLabel=sp.label;this.spellLabelTimer=45;
     return new Projectile(this.cx+this.facing*24,this.cy-52,this.facing,this.isAI?'ai':'player',type);
   }
 
@@ -1781,8 +1832,8 @@ function loop(){
   // player input
   if(player.stateTimer===0&&player.hurtTimer===0&&player.frozenTimer===0){
     let moved=false;
-    if(keys['ArrowLeft']) {player.x-=3*player.speedMult;player.state='walk';moved=true;}
-    if(keys['ArrowRight']){player.x+=3*player.speedMult;player.state='walk';moved=true;}
+    if(keys['ArrowLeft']) {player.x-=3*player.speedMult*(shopSpeedMult||1);player.state='walk';moved=true;}
+    if(keys['ArrowRight']){player.x+=3*player.speedMult*(shopSpeedMult||1);player.state='walk';moved=true;}
     if(!moved&&player.state==='walk'&&player.onGround)player.state='idle';
     if(keys['ArrowUp']&&!prevK['ArrowUp'])player.tryJump();
     const ap=keys['a']||keys['A'],sp=keys['s']||keys['S'];
@@ -1817,8 +1868,11 @@ function loop(){
       }
     }
     // 2: MEGA ULTRA SLASH
-    if(keys['2']&&!prevK['2']&&slashCooldown===0){
-      slashCooldown=SLASH_COOLDOWN;
+    const slashAvail=slashCooldown===0&&(window._slashStock===undefined||(window._slashUsed||0)<(window._slashStock||1));
+    const effectiveSlashCD=window._effectiveSlashCD||SLASH_COOLDOWN;
+    if(keys['2']&&!prevK['2']&&slashAvail){
+      slashCooldown=effectiveSlashCD;
+      if(window._slashUsed!==undefined)window._slashUsed++;
       player.state='punch'; player.stateTimer=35;
       // 80% HP damage guaranteed
       if(aiFighter){
@@ -1845,11 +1899,11 @@ function loop(){
     // Space: dacă vizezi inamicul cu linia → MOARTE INSTANTANEE; altfel ia arma
     if(keys[' ']&&!prevK[' ']){
       const lineOnEnemy=isAiming&&aiFighter&&clickCooldown===0
-        &&Math.abs(mouseX-aiFighter.cx)<85
+        &&Math.abs(mouseX-aiFighter.cx)<85*(shopAimRange||1)
         &&mouseY>aiFighter.y-130&&mouseY<aiFighter.y+20;
       if(lineOnEnemy){
         // 💣 BOMBĂ PE LINIE → UCIDE INSTANT
-        isAiming=false; clickCooldown=300;
+        isAiming=false; if(!shopAimNoCd)clickCooldown=300;
         const dmg=aiFighter.maxHP; // 100% HP = moarte sigură
         aiFighter.takeDamage(dmg,'magic');
         clickKillFx={x1:player.cx,y1:player.cy-50,x2:aiFighter.cx,y2:aiFighter.cy-60,t:60,maxT:60};
@@ -2036,7 +2090,7 @@ function loop(){
 
   // ── Linie de vizare (mouse apăsat) ──
   if(isAiming&&gameOn&&player){
-    const onEnemy=aiFighter&&Math.abs(mouseX-aiFighter.cx)<85&&mouseY>aiFighter.y-130&&mouseY<aiFighter.y+20;
+    const onEnemy=aiFighter&&Math.abs(mouseX-aiFighter.cx)<85*(shopAimRange||1)&&mouseY>aiFighter.y-130&&mouseY<aiFighter.y+20;
     const ready=clickCooldown===0;
     const t=Date.now()*.01;
     ctx.save();
@@ -2111,6 +2165,7 @@ function loop(){
   if(aiFighter.health<=0){
     gameOn=false;
     exciteCrowd(80);
+    earnCoins();
     const nextE=ENEMY_ROSTER.find(e=>e.minLvl>level);
     if(nextE){
       showMsg(`🔥 KEN CÂȘTIGĂ! Urmează ${nextE.emoji} ${nextE.name}!`,'#ffd700');
@@ -2143,11 +2198,216 @@ function startGame(){
   aiFighter=new Fighter(660,true);
   aiFighter.maxHP=Math.round((60+level*1.0)*currentEnemy.hpMult);aiFighter.health=aiFighter.maxHP;
   aiCtrl=new AICtrl(aiFighter,player);
+  applyShopEffects();
   gameOn=true;requestAnimationFrame(loop);
 }
 document.getElementById('startBtn').addEventListener('click',startGame);
-ctx.drawImage(bgCanvas,0,0);
-drawCrowd();
+
+// ══════════════════════════════════════════════════════
+//  SHOP SYSTEM
+// ══════════════════════════════════════════════════════
+let coins=parseInt(localStorage.getItem('ka_coins')||'300');
+let ownedItems=JSON.parse(localStorage.getItem('ka_owned')||'{}');
+// Buff vars aplicați din shop la fiecare luptă
+let shopDmgMult=1,shopSpeedMult=1,shopDmgReduction=0;
+let shopBombBonus=0,shopManaMultiplier=1,shopNoMana=false;
+let shopSlashCDMult=1,shopAimNoCd=false,shopAimRange=1;
+
+const SHOP_ITEMS=[
+// ── ACCESORII ──────────────────────────────────────────
+{id:'hp1',    nm:'Poțiune de Viață',     em:'💊',cat:'acc',pr:50,  dsc:'+50 HP la startul luptei',            ef:'hp_start:50'},
+{id:'hp2',    nm:'Elixir Putere',        em:'🍶',cat:'acc',pr:90,  dsc:'+100 HP extra la start',               ef:'hp_start:100'},
+{id:'maxhp1', nm:'Inimă de Cristal',     em:'💎',cat:'acc',pr:200, dsc:'+200 HP maxim permanent',              ef:'maxhp:200'},
+{id:'mana1',  nm:'Cristal de Mana',      em:'🔷',cat:'acc',pr:60,  dsc:'Mana se reface de 2× mai rapid',      ef:'mana_mult:2'},
+{id:'mana2',  nm:'Orb Magic',            em:'🔮',cat:'acc',pr:80,  dsc:'Pornești fiecare luptă cu mana plină', ef:'full_mana:1'},
+{id:'speed1', nm:'Cizme de Viteză',      em:'👟',cat:'acc',pr:90,  dsc:'Ken aleargă cu 30% mai repede',        ef:'speed:1.3'},
+{id:'speed2', nm:'Aripi de Vânt',        em:'🪶',cat:'acc',pr:210, dsc:'Viteză ×2 tot timpul luptei',         ef:'speed:2'},
+{id:'shield1',nm:'Scut de Start',        em:'🛡',cat:'acc',pr:75,  dsc:'Pornești lupta cu scut magic activ',   ef:'shield_start:1'},
+{id:'regen1', nm:'Inimă Regeneratoare',  em:'❤️',cat:'acc',pr:100, dsc:'HP crește automat de la start',        ef:'regen_start:1'},
+{id:'bomb1',  nm:'Geantă de Bombe',      em:'💣',cat:'acc',pr:65,  dsc:'+5 bombe extra pe luptă',              ef:'bombs:5'},
+{id:'bomb2',  nm:'Arsenalul Exploziv',   em:'🧨',cat:'acc',pr:150, dsc:'+15 bombe extra pe luptă',             ef:'bombs:15'},
+{id:'slash1', nm:'Energia Slashului',    em:'⚔', cat:'acc',pr:90,  dsc:'Mega Slash se reîncarcă 2× mai repede',ef:'slash_cd:0.5'},
+{id:'slash2', nm:'Dublu Slash',          em:'🗡',cat:'acc',pr:220, dsc:'Poți folosi Mega Slash de 3× pe luptă',ef:'slash_stock:3'},
+{id:'aim1',   nm:'Ochean Magic',         em:'🎯',cat:'acc',pr:75,  dsc:'Raza de vizare cu linia e mai mare',   ef:'aim_range:1.8'},
+{id:'aim2',   nm:'Laser Fără Oprire',    em:'🔴',cat:'acc',pr:190, dsc:'Linia de vizare nu mai are cooldown',   ef:'aim_nocd:1'},
+// ── PUTERI ─────────────────────────────────────────────
+{id:'berserk1',nm:'Furie Berserk',       em:'💀',cat:'putere',pr:130,dsc:'Pornești lupta în modul BERSERK',     ef:'berserk_start:1'},
+{id:'freeze1', nm:'Înghețare Imediată',  em:'❄️',cat:'putere',pr:100,dsc:'Inamicul e înghețat primele 4 sec',  ef:'freeze_enemy:240'},
+{id:'dmg1',    nm:'Puterea Titanului',   em:'👊',cat:'putere',pr:170,dsc:'Pumnii și picioarele dau ×2 daune',  ef:'dmg_mult:2'},
+{id:'dmg2',    nm:'Forța Zeilor',        em:'⚡',cat:'putere',pr:300,dsc:'Tot damage-ul tău ×3',               ef:'dmg_mult:3'},
+{id:'spell1',  nm:'Maestru Magic',       em:'🔮',cat:'putere',pr:150,dsc:'Toate vrăjile fac ×2 daune',         ef:'spell_dmg:2'},
+{id:'def1',    nm:'Piele de Fier',       em:'🪨',cat:'putere',pr:160,dsc:'Primești cu 35% mai puțin damage',   ef:'dmg_red:0.35'},
+{id:'def2',    nm:'Armură Divină',       em:'🏛',cat:'putere',pr:280,dsc:'Primești cu 60% mai puțin damage',   ef:'dmg_red:0.6'},
+{id:'combo1',  nm:'Combo Mortal',        em:'🥊',cat:'putere',pr:110,dsc:'AI face combouri mult mai rar',      ef:'less_combo:1'},
+{id:'life1',   nm:'Vampirism',           em:'🧛',cat:'putere',pr:180,dsc:'Recuperezi 5 HP la fiecare lovitură', ef:'lifesteal:5'},
+{id:'bomb3',   nm:'Bombă Nucleară',      em:'☢️',cat:'putere',pr:140,dsc:'Bombele tale fac ×3 daune',          ef:'bomb_dmg:3'},
+{id:'mana3',   nm:'Mana Infinită',       em:'∞', cat:'putere',pr:240,dsc:'Vrăjile nu consumă deloc mana',      ef:'no_mana:1'},
+{id:'money1',  nm:'Simțul Afacerilor',   em:'💰',cat:'putere',pr:120,dsc:'Câștigați ×2 mai multe monede',      ef:'money_mult:2'},
+// ── ARME ───────────────────────────────────────────────
+{id:'wpn_sw',  nm:'Sabie de Start',      em:'🗡',cat:'arma',pr:80,  dsc:'O sabie apare garantat la start',     ef:'spawn_sword:1'},
+{id:'wpn_hm',  nm:'Ciocan de Start',     em:'🔨',cat:'arma',pr:90,  dsc:'Un ciocan apare garantat la start',   ef:'spawn_hammer:1'},
+{id:'wpn_ex',  nm:'Excalibur Garantat',  em:'⚔️',cat:'arma',pr:220, dsc:'Excalibur apare garantat la start',   ef:'spawn_excalibur:1'},
+{id:'wpn_mj',  nm:'Mjölnir Garantat',    em:'⚡',cat:'arma',pr:240, dsc:'Mjölnir apare garantat la start',     ef:'spawn_mjolnir:1'},
+{id:'wpn_sp',  nm:'Spada Dragonului',    em:'🐉',cat:'arma',pr:300, dsc:'Ambele arme supreme apar de la start',ef:'spawn_both_super:1'},
+{id:'wpn_tr',  nm:'Tridentul lui Poseidon',em:'🔱',cat:'arma',pr:280,dsc:'Aruncă cu tridentul magic (vrăji ×4)',ef:'spell_dmg:4'},
+{id:'wpn_ic',  nm:'Lancea de Gheață',    em:'🧊',cat:'arma',pr:160, dsc:'Înghețe inamicul la fiecare lovitură', ef:'freeze_on_hit:60'},
+{id:'wpn_fire',nm:'Sabia de Foc',        em:'🔥',cat:'arma',pr:170, dsc:'Setezi inamicul în flăcări la lovitură',ef:'burn_on_hit:30'},
+];
+
+// ── Shop helpers ────────────────────────────────
+function saveShop(){localStorage.setItem('ka_coins',coins);localStorage.setItem('ka_owned',JSON.stringify(ownedItems));}
+function updateCoinDisplay(){
+  document.getElementById('coinCount').textContent=coins;
+  document.getElementById('shopCoinCount').textContent=coins;
+  const pct=Math.min(100,coins/20)+'%'; // max visible at 2000 coins
+  document.getElementById('moneyFillBar').style.width=pct;
+}
+let _shopCat='acc';
+function renderShop(cat){
+  _shopCat=cat||_shopCat;
+  const grid=document.getElementById('shopGrid');
+  grid.innerHTML='';
+  SHOP_ITEMS.filter(it=>it.cat===_shopCat).forEach(it=>{
+    const owned=!!ownedItems[it.id];
+    const cant=!owned&&coins<it.pr;
+    const div=document.createElement('div');
+    div.className='sItem'+(owned?' sOwned':'')+(cant?' sCant':'');
+    div.innerHTML=`<span class="sEm">${it.em}</span><div class="sNm">${it.nm}</div><div class="sDsc">${it.dsc}</div><div class="sPr">${owned?'✅ Deținut':'💰 '+it.pr}</div>${owned?'<span class="sBdg">✔</span>':''}`;
+    if(!owned&&!cant) div.addEventListener('click',()=>buyItem(it.id));
+    grid.appendChild(div);
+  });
+  document.querySelectorAll('.sTab').forEach(t=>t.classList.toggle('on',t.dataset.cat===_shopCat));
+}
+function buyItem(id){
+  const it=SHOP_ITEMS.find(x=>x.id===id);
+  if(!it||ownedItems[id]||coins<it.pr)return;
+  coins-=it.pr; ownedItems[id]=true; saveShop(); updateCoinDisplay(); renderShop();
+  showShopMsg('✅ Ai cumpărat: '+it.nm+'!');
+}
+let _shopMsgTimer=null;
+function showShopMsg(txt){
+  const el=document.getElementById('shopMsg');
+  el.textContent=txt; el.style.display='block';
+  clearTimeout(_shopMsgTimer);
+  _shopMsgTimer=setTimeout(()=>el.style.display='none',2200);
+}
+function openShop(){renderShop('acc');document.getElementById('shopOverlay').classList.add('open');}
+function closeShop(){document.getElementById('shopOverlay').classList.remove('open');}
+document.getElementById('shopBtn').addEventListener('click',openShop);
+document.getElementById('closeShopBtn').addEventListener('click',closeShop);
+document.querySelectorAll('.sTab').forEach(t=>t.addEventListener('click',()=>renderShop(t.dataset.cat)));
+updateCoinDisplay();
+
+// ── Aplică efectele shop la startul luptei ──────────
+function applyShopEffects(){
+  // reset buffs
+  shopDmgMult=1; shopSpeedMult=1; shopDmgReduction=0;
+  shopBombBonus=0; shopManaMultiplier=1; shopNoMana=false;
+  shopSlashCDMult=1; shopAimNoCd=false; shopAimRange=1;
+  let slashStockBonus=1; let spellDmgMult=1;
+  let moneyMult=1; let freezeOnHit=0; let burnOnHit=0;
+  let lifestealVal=0;
+  Object.keys(ownedItems).forEach(id=>{
+    const it=SHOP_ITEMS.find(x=>x.id===id); if(!it)return;
+    const [eKey,eVal]=it.ef.split(':');
+    const v=parseFloat(eVal);
+    if(eKey==='hp_start')    player.health=Math.min(player.maxHP+v, player.health+v);
+    if(eKey==='maxhp')       {player.maxHP+=v; player.health=Math.min(player.maxHP,player.health+v);}
+    if(eKey==='mana_mult')   shopManaMultiplier=Math.max(shopManaMultiplier,v);
+    if(eKey==='full_mana')   player.mana=MANA_MAX;
+    if(eKey==='speed')       shopSpeedMult=Math.max(shopSpeedMult,v);
+    if(eKey==='shield_start')player.shieldTimer=180;
+    if(eKey==='regen_start') player.regenTimer=360;
+    if(eKey==='bombs')       shopBombBonus+=v;
+    if(eKey==='slash_cd')    shopSlashCDMult=Math.min(shopSlashCDMult,v);
+    if(eKey==='slash_stock') slashStockBonus=Math.max(slashStockBonus,v);
+    if(eKey==='aim_range')   shopAimRange=Math.max(shopAimRange,v);
+    if(eKey==='aim_nocd')    shopAimNoCd=true;
+    if(eKey==='berserk_start')player.berserkerTimer=300;
+    if(eKey==='freeze_enemy')aiFighter.frozenTimer=v;
+    if(eKey==='dmg_mult')    shopDmgMult=Math.max(shopDmgMult,v);
+    if(eKey==='spell_dmg')   spellDmgMult=Math.max(spellDmgMult,v);
+    if(eKey==='dmg_red')     shopDmgReduction=Math.max(shopDmgReduction,v);
+    if(eKey==='less_combo')  {} // handled in AICtrl
+    if(eKey==='lifesteal')   lifestealVal=Math.max(lifestealVal,v);
+    if(eKey==='bomb_dmg')    {} // handled in bomb explode
+    if(eKey==='no_mana')     shopNoMana=true;
+    if(eKey==='money_mult')  moneyMult=Math.max(moneyMult,v);
+    if(eKey==='spawn_sword')  pickups.push(new Pickup(200,'sword'));
+    if(eKey==='spawn_hammer') pickups.push(new Pickup(200,'hammer'));
+    if(eKey==='spawn_excalibur')pickups.push(new Pickup(200,'excalibur'));
+    if(eKey==='spawn_mjolnir')  pickups.push(new Pickup(200,'mjolnir'));
+    if(eKey==='spawn_both_super'){pickups.push(new Pickup(180,'excalibur'));pickups.push(new Pickup(250,'mjolnir'));}
+    if(eKey==='freeze_on_hit') freezeOnHit=v;
+    if(eKey==='burn_on_hit')   burnOnHit=v;
+  });
+  // aplică bombardele
+  bombStock=5+shopBombBonus;
+  // aplică slash stocul
+  window._slashStock=slashStockBonus;
+  window._slashUsed=0;
+  // patch spell damage
+  if(spellDmgMult>1){
+    Object.values(SPELLS).forEach(sp=>{sp._baseDmg=sp._baseDmg||sp.dmgBase; sp.dmgBase=Math.round(sp._baseDmg*spellDmgMult);});
+  } else {
+    Object.values(SPELLS).forEach(sp=>{if(sp._baseDmg)sp.dmgBase=sp._baseDmg;});
+  }
+  // patch takeDamage pentru damage reduction + lifesteal
+  if(shopDmgReduction>0||lifestealVal>0){
+    const origTD=Fighter.prototype._origTD||Fighter.prototype.takeDamage;
+    Fighter.prototype._origTD=origTD;
+    Fighter.prototype.takeDamage=function(dmg,type){
+      if(!this.isAI&&shopDmgReduction>0)dmg=Math.round(dmg*(1-shopDmgReduction));
+      origTD.call(this,dmg,type);
+      if(!this.isAI&&lifestealVal>0&&this.health>0){this.health=Math.min(this.maxHP,this.health+lifestealVal);}
+    };
+  }
+  // freeze / burn on hit
+  window._shopFreezeOnHit=freezeOnHit;
+  window._shopBurnOnHit=burnOnHit;
+  window._shopMoneyMult=moneyMult;
+  // slash cooldown
+  if(typeof SLASH_COOLDOWN!=='undefined') window._effectiveSlashCD=Math.round(SLASH_COOLDOWN*shopSlashCDMult);
+}
+
+// ── Câștigă monede după victorie ────────────────────
+function earnCoins(){
+  const base=level*8;
+  const hpBonus=Math.round((player.health/player.maxHP)*60);
+  const mult=window._shopMoneyMult||1;
+  const earned=Math.round((base+hpBonus)*mult);
+  coins+=earned; saveShop(); updateCoinDisplay();
+  impactTexts.push(new ImpactText(W/2,60,'+'+earned+' 💰 MONEDE!','#ffd700'));
+}
+
+// ── Menu screen pe canvas ────────────────────────────
+function drawMenuScreen(){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0d0020'); g.addColorStop(1,'#200040');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // linii decorative
+  ctx.save(); ctx.globalAlpha=.08;
+  for(let i=0;i<12;i++){ctx.strokeStyle='#aa44ff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,i*38);ctx.lineTo(W,i*38-20);ctx.stroke();}
+  ctx.restore();
+  // titlu
+  ctx.save();
+  ctx.textAlign='center';
+  ctx.font='bold 52px Arial Black';
+  ctx.fillStyle='#ffd700'; ctx.shadowColor='#ffd700'; ctx.shadowBlur=30;
+  ctx.fillText('⚔ KARATE ARENA ⚔',W/2,H/2-60);
+  ctx.shadowBlur=0;
+  ctx.font='bold 20px Arial Black';
+  ctx.fillStyle='#cc88ff';
+  ctx.fillText('Apasă ▶ START pentru a lupta!',W/2,H/2);
+  ctx.font='15px Arial';
+  ctx.fillStyle='#886699';
+  ctx.fillText('🛒 Vizitează Magazinul pentru super puteri înainte de luptă',W/2,H/2+40);
+  // cadru
+  ctx.strokeStyle='#ffd700'; ctx.lineWidth=4; ctx.shadowColor='#ffd700'; ctx.shadowBlur=15;
+  ctx.strokeRect(10,10,W-20,H-20);
+  ctx.restore();
+}
+drawMenuScreen();
 </script>
 </body>
 </html>
