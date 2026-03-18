@@ -94,12 +94,24 @@
     #contTitle{font-size:19px;font-weight:bold;color:#88ccff;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #0033aa55;}
     #contAllConq{background:linear-gradient(135deg,#442200,#775500);border:2px solid #ffd700;border-radius:10px;padding:10px;text-align:center;margin-top:10px;font-size:14px;color:#ffd700;font-weight:bold;}
     #globeNoSelect{color:#223355;font-size:14px;text-align:center;line-height:1.8;margin-top:30px;}
+    /* ══ POVESTE OVERLAY ══ */
+    #storyBtn{background:linear-gradient(135deg,#1a0a00,#663300);color:#ffcc88;border:2px solid #cc6600;border-radius:12px;padding:8px 20px;font-size:13px;font-weight:bold;cursor:pointer;box-shadow:0 3px 0 #440000;transition:transform .08s,box-shadow .08s;letter-spacing:.5px;}
+    #storyBtn:hover{transform:translateY(-2px);background:linear-gradient(135deg,#330a00,#994400);}
+    #storyOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:1000;align-items:center;justify-content:center;flex-direction:column;}
+    #storyOverlay.open{display:flex;}
+    #storyCanvas{display:block;max-width:100%;max-height:100%;}
+    #storyControls{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;gap:16px;z-index:1001;}
+    #storySkipBtn{background:rgba(0,0,0,.7);border:2px solid #666;color:#aaa;border-radius:10px;padding:8px 22px;font-size:13px;cursor:pointer;font-weight:bold;transition:all .12s;}
+    #storySkipBtn:hover{border-color:#ffd700;color:#ffd700;}
+    #storyNextBtn{background:linear-gradient(135deg,#440000,#aa2200);border:2px solid #ff4400;color:#fff;border-radius:10px;padding:8px 26px;font-size:13px;cursor:pointer;font-weight:bold;letter-spacing:1px;transition:all .12s;}
+    #storyNextBtn:hover{background:linear-gradient(135deg,#660000,#cc3300);}
   </style>
 </head>
 <body>
 <h1>⚔ KARATE ARENA ⚔</h1>
 <div id="moneyRow">
   <div id="moneyDisplay">💰 <span id="coinCount">300</span> monede <span id="moneyFill"><span id="moneyFillBar" style="width:30%"></span></span></div>
+  <button id="storyBtn">📖 Poveste</button>
   <button id="shopBtn">🛒 Cumpără din Magazin</button>
   <button id="planetBtn">🌍 Planetă</button>
 </div>
@@ -142,6 +154,14 @@
   <div id="shopGrid"></div>
 </div>
 <div id="shopMsg"></div>
+<!-- ══ STORY OVERLAY ══ -->
+<div id="storyOverlay">
+  <canvas id="storyCanvas" width="820" height="480"></canvas>
+  <div id="storyControls">
+    <button id="storySkipBtn">⏭ Sari peste</button>
+    <button id="storyNextBtn">▶ Următorul</button>
+  </div>
+</div>
 <!-- ══ PLANET OVERLAY ══ -->
 <div id="planetOverlay">
   <div id="planetHeader">
@@ -2736,6 +2756,402 @@ function drawMenuScreen(){
   ctx.strokeRect(10,10,W-20,H-20);
   ctx.restore();
 }
+// ══════════════════════════════════════════════════════
+//  STORY / CUTSCENE SYSTEM
+// ══════════════════════════════════════════════════════
+const sc=document.getElementById('storyCanvas');
+const sctx=sc.getContext('2d');
+const SW=sc.width, SH=sc.height;
+
+const STORY_PANELS=[
+  {
+    bg:['#000000','#0a0010'],
+    title:'KARATE ARENA',
+    sub:'WORLD TOUR',
+    body:'Undeva, într-un oraș uitat de lume...',
+    body2:'...un luptător pe nume KEN se antrena zi și noapte.',
+    char:'ken', side:'right',
+    sfx:'stars', duration:320
+  },
+  {
+    bg:['#0d0000','#2a0000'],
+    title:'CATASTROFA',
+    sub:'',
+    body:'AKUMA — demonul întunericului — a coborât pe Pământ.',
+    body2:'El a înfrânt toți maeștrii de karate din lume.',
+    char:'akuma', side:'left',
+    sfx:'lightning', duration:340
+  },
+  {
+    bg:['#000a00','#001a00'],
+    title:'MISIUNEA',
+    sub:'',
+    body:'Maestrul lui Ken a căzut în bătălie...',
+    body2:'"Ken... tu ești ultima speranță. Du-te și luptă!"',
+    char:'master', side:'right',
+    sfx:'none', duration:340
+  },
+  {
+    bg:['#080010','#150030'],
+    title:'WORLD TOUR',
+    sub:'CUCEREȘTE LUMEA',
+    body:'Ken a pornit în călătorie pe toate continentele.',
+    body2:'Fiecare țară are campionul ei. Fiecare luptă îl face mai puternic.',
+    char:'globe', side:'center',
+    sfx:'stars', duration:360
+  },
+  {
+    bg:['#1a0000','#3a0000'],
+    title:'DUȘMANII',
+    sub:'',
+    body:'Ryu. Guile. Zangief. M.Bison. Gill...',
+    body2:'Șase demoni. Șase bătălii. O singură victorie posibilă.',
+    char:'roster', side:'center',
+    sfx:'lightning', duration:380
+  },
+  {
+    bg:['#0a0a00','#1a1a00'],
+    title:'PUTEREA TA',
+    sub:'',
+    body:'Adună arme. Cumpără puteri. Pune capcane.',
+    body2:'Folosește orice îți stă la dispoziție pentru a supraviețui.',
+    char:'weapons', side:'right',
+    sfx:'none', duration:340
+  },
+  {
+    bg:['#000000','#001a1a'],
+    title:'DESTINUL',
+    sub:'ESTE AL TĂU',
+    body:'"Voi cuceri fiecare colț al lumii..."',
+    body2:'"...și voi deveni CAMPION MONDIAL ABSOLUT!"',
+    char:'ken_pose', side:'center',
+    sfx:'stars', duration:400
+  },
+];
+
+let storyPanel=0, storyT=0, storyAlpha=0, storyFade='in', storyAnimId=null;
+
+function drawStoryPanel(idx, alpha){
+  const p=STORY_PANELS[idx];
+  const t=storyT;
+  sctx.save();
+  sctx.globalAlpha=1;
+
+  // fundal gradient
+  const g=sctx.createLinearGradient(0,0,0,SH);
+  g.addColorStop(0,p.bg[0]); g.addColorStop(1,p.bg[1]);
+  sctx.fillStyle=g; sctx.fillRect(0,0,SW,SH);
+
+  // efecte fundal
+  if(p.sfx==='stars'){
+    for(let i=0;i<60;i++){
+      const sx=(i*137+t*.5)%SW, sy=(i*89+t*.3)%SH;
+      const sa=0.3+Math.sin(t*.05+i)*.25;
+      sctx.fillStyle=`rgba(255,255,255,${sa})`;
+      sctx.beginPath();sctx.arc(sx,sy,1+Math.sin(i)*.5,0,Math.PI*2);sctx.fill();
+    }
+  } else if(p.sfx==='lightning'){
+    if(t%40<3){
+      sctx.strokeStyle='rgba(200,150,255,0.3)';sctx.lineWidth=1;
+      sctx.beginPath();
+      let lx=Math.random()*SW;sctx.moveTo(lx,0);
+      for(let s=0;s<8;s++){lx+=(-20+Math.random()*40);sctx.lineTo(lx,s*60);}
+      sctx.stroke();
+    }
+    for(let i=0;i<20;i++){
+      sctx.fillStyle=`rgba(100,50,200,${0.04+Math.sin(t*.08+i)*.03})`;
+      sctx.beginPath();sctx.arc((i*173)%SW,(i*97)%SH,2,0,Math.PI*2);sctx.fill();
+    }
+  }
+
+  // linie decorativă sus
+  const ln=sctx.createLinearGradient(0,0,SW,0);
+  ln.addColorStop(0,'transparent');ln.addColorStop(.5,'rgba(255,215,0,.6)');ln.addColorStop(1,'transparent');
+  sctx.fillStyle=ln;sctx.fillRect(0,70,SW,2);
+  sctx.fillRect(0,SH-72,SW,2);
+
+  // personaj / ilustrație
+  sctx.save();
+  const charAlpha=Math.min(1,(t-20)/40)*alpha;
+  sctx.globalAlpha=charAlpha;
+  if(p.char==='ken'||p.char==='ken_pose'){
+    const cx=p.side==='center'?SW/2:p.side==='right'?SW-180:180;
+    drawStoryKen(cx,SH-60,p.char==='ken_pose',t);
+  } else if(p.char==='akuma'){
+    drawStoryAkuma(170,SH-60,t);
+  } else if(p.char==='master'){
+    drawStoryMaster(SW-200,SH-60,t);
+  } else if(p.char==='globe'){
+    drawStoryGlobe(SW/2,SH/2+20,t);
+  } else if(p.char==='roster'){
+    drawStoryRoster(t);
+  } else if(p.char==='weapons'){
+    drawStoryWeapons(SW-160,SH/2+30,t);
+  }
+  sctx.restore();
+
+  // text overlay
+  sctx.globalAlpha=alpha;
+
+  // titlu
+  const ty=Math.min(1,(t-10)/30);
+  sctx.save();
+  sctx.textAlign='center';
+  sctx.font='bold 46px Arial Black';
+  sctx.fillStyle='#ffd700';
+  sctx.shadowColor='#ffd700';sctx.shadowBlur=25;
+  sctx.globalAlpha=alpha*ty;
+  sctx.fillText(p.title,SW/2,90);
+  if(p.sub){
+    sctx.font='bold 22px Arial Black';sctx.fillStyle='#ff8800';sctx.shadowColor='#ff8800';sctx.shadowBlur=15;
+    sctx.fillText(p.sub,SW/2,122);
+  }
+  sctx.restore();
+
+  // text corp — apare progresiv (typewriter)
+  const textStart=60;
+  if(t>textStart){
+    const maxChars1=Math.floor((t-textStart)*1.5);
+    const txt1=p.body.substring(0,maxChars1);
+    sctx.save();
+    sctx.font='bold 18px Arial';
+    sctx.fillStyle='#eeeeff';
+    sctx.shadowColor='#000';sctx.shadowBlur=8;
+    sctx.textAlign='center';
+    sctx.globalAlpha=alpha;
+    sctx.fillText(txt1,SW/2,SH-130);
+    sctx.restore();
+  }
+  if(t>textStart+p.body.length/1.5+30){
+    const maxChars2=Math.floor((t-textStart-p.body.length/1.5-30)*1.5);
+    const txt2=p.body2.substring(0,maxChars2);
+    sctx.save();
+    sctx.font='italic 16px Arial';
+    sctx.fillStyle='#ffcc88';
+    sctx.shadowColor='#000';sctx.shadowBlur=8;
+    sctx.textAlign='center';
+    sctx.globalAlpha=alpha*.9;
+    sctx.fillText(txt2,SW/2,SH-100);
+    sctx.restore();
+  }
+
+  // nr panou + progress bar
+  sctx.save();
+  sctx.globalAlpha=alpha*.5;
+  sctx.fillStyle='rgba(255,255,255,.1)';
+  sctx.fillRect(SW/2-150,SH-28,300,6);
+  sctx.fillStyle='#ffd700';
+  sctx.fillRect(SW/2-150,SH-28,300*(idx+1)/STORY_PANELS.length,6);
+  sctx.globalAlpha=alpha*.4;
+  sctx.font='11px Arial';sctx.fillStyle='#888';sctx.textAlign='right';
+  sctx.fillText((idx+1)+' / '+STORY_PANELS.length,SW/2+150,SH-14);
+  sctx.restore();
+
+  sctx.restore();
+}
+
+function drawStoryKen(cx,cy,pose,t){
+  const bob=Math.sin(t*.06)*3;
+  sctx.save();
+  sctx.shadowColor='rgba(255,150,50,.4)';sctx.shadowBlur=30;
+  // corp alb
+  sctx.fillStyle='#ffffff';sctx.strokeStyle='#1a0800';sctx.lineWidth=2;
+  // trunchi
+  sctx.beginPath();sctx.ellipse(cx,cy-80+bob,28,38,0,0,Math.PI*2);sctx.fill();sctx.stroke();
+  // cap
+  sctx.fillStyle='#f5c28a';sctx.beginPath();sctx.arc(cx,cy-140+bob,24,0,Math.PI*2);sctx.fill();sctx.stroke();
+  // păr roșu
+  sctx.fillStyle='#cc3300';
+  sctx.beginPath();sctx.ellipse(cx,cy-158+bob,20,12,0,Math.PI,Math.PI*2);sctx.fill();
+  // bandana
+  sctx.fillStyle='#ff2200';sctx.beginPath();sctx.rect(cx-22,cy-150+bob,44,8);sctx.fill();sctx.stroke();
+  // brâu portocaliu
+  sctx.fillStyle='#ff8800';sctx.fillRect(cx-28,cy-48+bob,56,10);sctx.strokeRect(cx-28,cy-48+bob,56,10);
+  // picioare
+  sctx.fillStyle='#ffffff';
+  const kick=pose?-25:0;
+  sctx.beginPath();sctx.roundRect(cx-18,cy-44+bob,14,55,4);sctx.fill();sctx.stroke();
+  sctx.beginPath();sctx.roundRect(cx+4,cy-44+bob+kick,14,55,4);sctx.fill();sctx.stroke();
+  // brațe
+  if(pose){
+    sctx.beginPath();sctx.moveTo(cx-28,cy-90+bob);sctx.lineTo(cx-65,cy-120+bob);sctx.lineWidth=12;sctx.strokeStyle='#ffffff';sctx.stroke();sctx.strokeStyle='#1a0800';sctx.lineWidth=2;sctx.stroke();
+    // energie în pumn
+    sctx.fillStyle='rgba(255,150,0,.7)';sctx.beginPath();sctx.arc(cx-65,cy-120+bob,14,0,Math.PI*2);sctx.fill();
+    sctx.fillStyle='#ffff00';sctx.beginPath();sctx.arc(cx-65,cy-120+bob,6,0,Math.PI*2);sctx.fill();
+  } else {
+    sctx.beginPath();sctx.moveTo(cx-28,cy-90+bob);sctx.lineTo(cx-55,cy-75+bob);sctx.lineWidth=12;sctx.strokeStyle='#ffffff';sctx.stroke();sctx.strokeStyle='#1a0800';sctx.lineWidth=2;sctx.stroke();
+  }
+  sctx.beginPath();sctx.moveTo(cx+28,cy-90+bob);sctx.lineTo(cx+55,cy-80+bob);sctx.lineWidth=12;sctx.strokeStyle='#ffffff';sctx.stroke();sctx.strokeStyle='#1a0800';sctx.lineWidth=2;sctx.stroke();
+  sctx.restore();
+}
+
+function drawStoryAkuma(cx,cy,t){
+  const fl=Math.sin(t*.08)*3;
+  sctx.save();
+  sctx.shadowColor='rgba(150,0,255,.5)';sctx.shadowBlur=40;
+  // aură violetă
+  const aura=sctx.createRadialGradient(cx,cy-90,10,cx,cy-90,70);
+  aura.addColorStop(0,'rgba(180,0,255,.3)');aura.addColorStop(1,'transparent');
+  sctx.fillStyle=aura;sctx.beginPath();sctx.arc(cx,cy-90,70,0,Math.PI*2);sctx.fill();
+  // haină neagră
+  sctx.fillStyle='#111133';sctx.strokeStyle='#440088';sctx.lineWidth=2;
+  sctx.beginPath();sctx.ellipse(cx,cy-80+fl,32,42,0,0,Math.PI*2);sctx.fill();sctx.stroke();
+  // cap
+  sctx.fillStyle='#8a3a2a';sctx.beginPath();sctx.arc(cx,cy-140+fl,26,0,Math.PI*2);sctx.fill();sctx.stroke();
+  // coarne
+  sctx.fillStyle='#cc0000';
+  [[cx-15,cy-163],[cx+15,cy-163]].forEach(([hx,hy])=>{sctx.beginPath();sctx.moveTo(hx,hy+fl);sctx.lineTo(hx-6,hy-18+fl);sctx.lineTo(hx+6,hy-18+fl);sctx.closePath();sctx.fill();});
+  // ochi roșii
+  sctx.fillStyle='#ff0000';
+  sctx.beginPath();sctx.arc(cx-10,cy-143+fl,5,0,Math.PI*2);sctx.fill();
+  sctx.beginPath();sctx.arc(cx+10,cy-143+fl,5,0,Math.PI*2);sctx.fill();
+  // păr alb spike
+  sctx.fillStyle='#ccccdd';
+  for(let i=-2;i<=2;i++){sctx.beginPath();sctx.moveTo(cx+i*8,cy-162+fl);sctx.lineTo(cx+i*8-4,cy-182+fl);sctx.lineTo(cx+i*8+4,cy-182+fl);sctx.closePath();sctx.fill();}
+  // brațe
+  sctx.strokeStyle='#111133';sctx.lineWidth=14;
+  sctx.beginPath();sctx.moveTo(cx-32,cy-85+fl);sctx.lineTo(cx-65,cy-65+fl);sctx.stroke();
+  sctx.beginPath();sctx.moveTo(cx+32,cy-85+fl);sctx.lineTo(cx+65,cy-65+fl);sctx.stroke();
+  // energie neagră
+  sctx.fillStyle='rgba(180,0,255,.6)';sctx.beginPath();sctx.arc(cx-65,cy-65+fl,12,0,Math.PI*2);sctx.fill();
+  sctx.restore();
+}
+
+function drawStoryMaster(cx,cy,t){
+  const bob=Math.sin(t*.04)*2;
+  sctx.save();
+  sctx.shadowColor='rgba(255,200,100,.3)';sctx.shadowBlur=20;
+  // halat alb vechi
+  sctx.fillStyle='#e8e0c8';sctx.strokeStyle='#8a7050';sctx.lineWidth=2;
+  sctx.beginPath();sctx.ellipse(cx,cy-75+bob,30,44,0,0,Math.PI*2);sctx.fill();sctx.stroke();
+  // cap
+  sctx.fillStyle='#d4a875';sctx.beginPath();sctx.arc(cx,cy-138+bob,22,0,Math.PI*2);sctx.fill();sctx.stroke();
+  // barbă albă
+  sctx.fillStyle='#ffffff';sctx.beginPath();sctx.ellipse(cx,cy-118+bob,14,20,0,0,Math.PI);sctx.fill();
+  // mustață
+  sctx.beginPath();sctx.ellipse(cx,cy-131+bob,12,6,0,0,Math.PI*2);sctx.fill();
+  // riduri
+  sctx.strokeStyle='#b08060';sctx.lineWidth=1.5;
+  sctx.beginPath();sctx.moveTo(cx-18,cy-145+bob);sctx.quadraticCurveTo(cx,cy-152+bob,cx+18,cy-145+bob);sctx.stroke();
+  // mână întinsă
+  sctx.strokeStyle='#e8e0c8';sctx.lineWidth=12;
+  sctx.beginPath();sctx.moveTo(cx-30,cy-80+bob);sctx.lineTo(cx-70,cy-60+bob);sctx.stroke();
+  sctx.strokeStyle='#8a7050';sctx.lineWidth=2;sctx.stroke();
+  // text special
+  sctx.font='italic 13px Arial';sctx.fillStyle='rgba(255,220,100,.5)';sctx.textAlign='center';
+  sctx.fillText('"Du-te, Ken..."',cx,cy-175+bob);
+  sctx.restore();
+}
+
+function drawStoryGlobe(cx,cy,t){
+  const r=80;
+  sctx.save();
+  sctx.shadowColor='rgba(0,100,255,.5)';sctx.shadowBlur=40;
+  // ocean
+  const og=sctx.createRadialGradient(cx-20,cy-20,10,cx,cy,r);
+  og.addColorStop(0,'#2255cc');og.addColorStop(1,'#001144');
+  sctx.fillStyle=og;sctx.beginPath();sctx.arc(cx,cy,r,0,Math.PI*2);sctx.fill();
+  // continente simple
+  const rot=t*.008;
+  [[-.1+rot,.0,.3,.35,'#44aa44'],[-.5+rot,-.1,.25,.3,'#aa8844'],
+   [.3+rot,-.15,.32,.28,'#cc9933'],[-.8+rot,-.05,.18,.25,'#55bb55'],
+   [1.1+rot,.1,.22,.2,'#dd7733']].forEach(([lx,ly,lw,lh,col])=>{
+    const sx=cx+Math.sin(lx)*r*.8, sy=cy+ly*r;
+    sctx.fillStyle=col;sctx.beginPath();sctx.ellipse(sx,sy,lw*r*.5,lh*r*.4,lx*.3,0,Math.PI*2);
+    sctx.save();sctx.clip();sctx.beginPath();sctx.arc(cx,cy,r,0,Math.PI*2);sctx.fill();sctx.restore();
+  });
+  // atmosferă
+  const atm=sctx.createRadialGradient(cx,cy,r*.85,cx,cy,r*1.2);
+  atm.addColorStop(0,'rgba(80,140,255,.4)');atm.addColorStop(1,'transparent');
+  sctx.fillStyle=atm;sctx.beginPath();sctx.arc(cx,cy,r*1.2,0,Math.PI*2);sctx.fill();
+  // rotiță brilliantă
+  sctx.strokeStyle='rgba(255,255,255,.15)';sctx.lineWidth=1;
+  for(let a=0;a<Math.PI*2;a+=Math.PI/6){sctx.beginPath();sctx.moveTo(cx,cy);sctx.lineTo(cx+Math.cos(a+rot)*r,cy+Math.sin(a+rot)*r);sctx.stroke();}
+  sctx.restore();
+}
+
+function drawStoryRoster(t){
+  const names=['AKUMA','RYU','GUILE','ZANGIEF','M.BISON','GILL'];
+  const cols=['#cc44ff','#4488ff','#44cc44','#ff6644','#ff2222','#ff8800'];
+  names.forEach((nm,i)=>{
+    const delay=i*25;
+    if(t<delay) return;
+    const ap=Math.min(1,(t-delay)/20);
+    const x=80+i*110, y=SH/2;
+    sctx.save();
+    sctx.globalAlpha=ap;
+    sctx.shadowColor=cols[i];sctx.shadowBlur=15;
+    sctx.fillStyle=cols[i];
+    sctx.beginPath();sctx.arc(x,y,34,0,Math.PI*2);sctx.fill();
+    sctx.strokeStyle='#fff';sctx.lineWidth=2;sctx.stroke();
+    sctx.font='bold 9px Arial Black';sctx.fillStyle='#fff';
+    sctx.textAlign='center';sctx.fillText(nm,x,y+4);
+    // X dacă cucerit
+    if(conqueredCountries[['akuma','ryu','guile','zangief','bison','gill'][i]]){
+      sctx.font='bold 28px Arial';sctx.fillStyle='rgba(255,0,0,.7)';sctx.fillText('✕',x,y+10);
+    }
+    sctx.restore();
+  });
+}
+
+function drawStoryWeapons(cx,cy,t){
+  const bob=Math.sin(t*.07)*4;
+  const items=[['⚔',cx-60,cy-40+bob,'#ffd700'],['🔨',cx-20,cy+0+bob,'#cc8833'],['💣',cx+20,cy-30+bob,'#ff4400'],['🔱',cx+60,cy+10+bob,'#4488ff']];
+  items.forEach(([em,wx,wy,col],i)=>{
+    const delay=i*30;if(t<delay)return;
+    const ap=Math.min(1,(t-delay)/15);
+    sctx.save();sctx.globalAlpha=ap;
+    sctx.shadowColor=col;sctx.shadowBlur=18;
+    sctx.font='36px Arial';sctx.textAlign='center';
+    sctx.fillText(em,wx,wy);
+    sctx.restore();
+  });
+}
+
+function storyLoop(){
+  storyT++;
+  const p=STORY_PANELS[storyPanel];
+  if(storyFade==='in'){
+    storyAlpha=Math.min(1,storyAlpha+0.04);
+    if(storyAlpha>=1) storyFade='hold';
+  } else if(storyFade==='hold'){
+    if(storyT>=p.duration-40) storyFade='out';
+  } else if(storyFade==='out'){
+    storyAlpha=Math.max(0,storyAlpha-0.04);
+    if(storyAlpha<=0){ advanceStory(); return; }
+  }
+  drawStoryPanel(storyPanel,storyAlpha);
+  storyAnimId=requestAnimationFrame(storyLoop);
+}
+
+function advanceStory(){
+  storyPanel++;
+  if(storyPanel>=STORY_PANELS.length){ closeStory(); return; }
+  storyT=0; storyAlpha=0; storyFade='in';
+  storyAnimId=requestAnimationFrame(storyLoop);
+}
+
+function openStory(){
+  storyPanel=0; storyT=0; storyAlpha=0; storyFade='in';
+  document.getElementById('storyOverlay').classList.add('open');
+  cancelAnimationFrame(storyAnimId);
+  storyAnimId=requestAnimationFrame(storyLoop);
+}
+function closeStory(){
+  document.getElementById('storyOverlay').classList.remove('open');
+  cancelAnimationFrame(storyAnimId);
+}
+
+document.getElementById('storyBtn').addEventListener('click',openStory);
+document.getElementById('storySkipBtn').addEventListener('click',closeStory);
+document.getElementById('storyNextBtn').addEventListener('click',()=>{
+  cancelAnimationFrame(storyAnimId);
+  storyT=0; storyAlpha=0; storyFade='in';
+  storyPanel++;
+  if(storyPanel>=STORY_PANELS.length){ closeStory(); return; }
+  storyAnimId=requestAnimationFrame(storyLoop);
+});
+
 drawMenuScreen();
 </script>
 </body>
