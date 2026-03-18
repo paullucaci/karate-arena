@@ -105,6 +105,8 @@
     #storySkipBtn:hover{border-color:#ffd700;color:#ffd700;}
     #storyNextBtn{background:linear-gradient(135deg,#440000,#aa2200);border:2px solid #ff4400;color:#fff;border-radius:10px;padding:8px 26px;font-size:13px;cursor:pointer;font-weight:bold;letter-spacing:1px;transition:all .12s;}
     #storyNextBtn:hover{background:linear-gradient(135deg,#660000,#cc3300);}
+    #storyMuteBtn{background:rgba(0,0,0,.7);border:2px solid #555;color:#fff;border-radius:10px;padding:8px 14px;font-size:17px;cursor:pointer;transition:all .12s;}
+    #storyMuteBtn:hover{border-color:#ffd700;}
   </style>
 </head>
 <body>
@@ -158,6 +160,7 @@
 <div id="storyOverlay">
   <canvas id="storyCanvas" width="820" height="480"></canvas>
   <div id="storyControls">
+    <button id="storyMuteBtn">🔊</button>
     <button id="storySkipBtn">⏭ Sari peste</button>
     <button id="storyNextBtn">▶ Următorul</button>
   </div>
@@ -3124,10 +3127,50 @@ function storyLoop(){
   storyAnimId=requestAnimationFrame(storyLoop);
 }
 
+// ── VOCE (Web Speech API) ──────────────────────────────
+let storyMuted=false;
+let storyVoice=null;
+
+// găsește vocea română (sau prima disponibilă)
+function loadVoice(){
+  const voices=window.speechSynthesis.getVoices();
+  storyVoice=voices.find(v=>v.lang.startsWith('ro'))
+    || voices.find(v=>v.lang.startsWith('ro-'))
+    || voices.find(v=>v.lang==='ro-RO')
+    || voices[0]||null;
+}
+if(window.speechSynthesis){
+  loadVoice();
+  window.speechSynthesis.onvoiceschanged=loadVoice;
+}
+
+function speakPanel(idx){
+  if(storyMuted||!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const p=STORY_PANELS[idx];
+  const u1=new SpeechSynthesisUtterance(p.body);
+  u1.lang='ro-RO'; u1.rate=0.88; u1.pitch=1.05; u1.volume=1;
+  if(storyVoice) u1.voice=storyVoice;
+  u1.onend=()=>{
+    if(storyMuted) return;
+    const u2=new SpeechSynthesisUtterance(p.body2);
+    u2.lang='ro-RO'; u2.rate=0.88; u2.pitch=1.05; u2.volume=1;
+    if(storyVoice) u2.voice=storyVoice;
+    speechSynthesis.speak(u2);
+  };
+  // mic delay ca textul typewriter să pornească prima
+  setTimeout(()=>{ if(!storyMuted) speechSynthesis.speak(u1); }, 900);
+}
+
+function stopSpeak(){
+  if(window.speechSynthesis) speechSynthesis.cancel();
+}
+
 function advanceStory(){
   storyPanel++;
   if(storyPanel>=STORY_PANELS.length){ closeStory(); return; }
   storyT=0; storyAlpha=0; storyFade='in';
+  speakPanel(storyPanel);
   storyAnimId=requestAnimationFrame(storyLoop);
 }
 
@@ -3135,9 +3178,11 @@ function openStory(){
   storyPanel=0; storyT=0; storyAlpha=0; storyFade='in';
   document.getElementById('storyOverlay').classList.add('open');
   cancelAnimationFrame(storyAnimId);
+  speakPanel(0);
   storyAnimId=requestAnimationFrame(storyLoop);
 }
 function closeStory(){
+  stopSpeak();
   document.getElementById('storyOverlay').classList.remove('open');
   cancelAnimationFrame(storyAnimId);
 }
@@ -3145,11 +3190,19 @@ function closeStory(){
 document.getElementById('storyBtn').addEventListener('click',openStory);
 document.getElementById('storySkipBtn').addEventListener('click',closeStory);
 document.getElementById('storyNextBtn').addEventListener('click',()=>{
+  stopSpeak();
   cancelAnimationFrame(storyAnimId);
   storyT=0; storyAlpha=0; storyFade='in';
   storyPanel++;
   if(storyPanel>=STORY_PANELS.length){ closeStory(); return; }
+  speakPanel(storyPanel);
   storyAnimId=requestAnimationFrame(storyLoop);
+});
+document.getElementById('storyMuteBtn').addEventListener('click',()=>{
+  storyMuted=!storyMuted;
+  document.getElementById('storyMuteBtn').textContent=storyMuted?'🔇':'🔊';
+  if(storyMuted) stopSpeak();
+  else speakPanel(storyPanel);
 });
 
 drawMenuScreen();
